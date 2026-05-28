@@ -200,34 +200,37 @@ const verifyPayment = async (req: any, res: Response) => {
     // Update or create payment record
     const transactionId =
       paymentMethod === 0 ? razorpay_payment_id! : `COD_${orderId}`;
-    let payment = await PaymentModel.findOne({ orderId, transactionId });
+      let payment = await PaymentModel.findOne({ orderId }); // <-- removed transactionId
 
-    if (!payment) {
-      payment = new PaymentModel({
-        userId: order.user_id,
+      if (!payment) {
+        payment = new PaymentModel({
+          userId: order.user_id,
+          orderId,
+          paymentMethod: paymentMethod === 0 ? "Razorpay" : "COD",
+          transactionId,
+          amount: order.totalAmount,
+          status: "Completed",
+        });
+      } else {
+        // Updates the existing pending record created in createOrder
+        payment.status = "Completed";
+        payment.transactionId = transactionId; // overwrites order_xxx → pay_xxx
+        payment.paymentMethod = paymentMethod === 0 ? "Razorpay" : "COD";
+        payment.updatedAt = new Date();
+      }
+      
+      await payment.save();
+      
+      // Then the order update already correctly uses payment._id:
+      const updatedOrder = await orderModel.findByIdAndUpdate(
         orderId,
-        paymentMethod: paymentMethod === 0 ? "Razorpay" : "COD",
-        transactionId,
-        amount: order.totalAmount,
-        status: "Completed",
-      });
-    } else {
-      payment.status = "Completed";
-      payment.updatedAt = new Date();
-    }
-
-    await payment.save();
-
-    // Update order status
-    const updatedOrder = await orderModel.findByIdAndUpdate(
-      orderId,
-      {
-        orderStatus: "Confirmed",
-        shippingStatus: "Pending",
-        payment_id: payment._id,
-      },
-      { new: true }
-    );
+        {
+          orderStatus: "Confirmed",
+          shippingStatus: "Pending",
+          payment_id: payment._id, // now points to the updated record
+        },
+        { new: true }
+      );
     if (!updatedOrder) {
       await PaymentModel.findByIdAndUpdate(payment._id, { status: "Pending" });
       return apiResponse(res, 404, false, "Order not found during update");

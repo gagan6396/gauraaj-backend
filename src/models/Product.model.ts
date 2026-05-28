@@ -35,6 +35,8 @@ export interface Product extends Document {
   rating: number;
   brand: string;
   isBestSeller: boolean; // Added best seller flag
+  isSeasonalFavorite: boolean; // Added seasonal favorite flag
+  isNewLaunch: boolean; // Added new launch flag
   sequence: number;
 }
 
@@ -175,6 +177,14 @@ const productSchema: Schema<Product> = new mongoose.Schema(
       trim: true,
     },
     isBestSeller: {
+      type: Boolean,
+      default: false,
+    },
+    isSeasonalFavorite: {
+      type: Boolean,
+      default: false,
+    },
+    isNewLaunch: {
       type: Boolean,
       default: false,
     },

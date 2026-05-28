@@ -38,6 +38,8 @@ interface UpdateProductData {
   images?: { url: string; sequence: number }[];
   video?: string;
   isBestSeller?: boolean;
+  isSeasonalFavorite?: boolean;
+  isNewLaunch?: boolean;
   sequence?: number;
 }
 
@@ -243,6 +245,8 @@ const updateProductBySupplier = async (req: any, res: Response) => {
           : "",
         sequence: req.body.sequence || product.sequence,
         isBestSeller: parsedData.isBestSeller ?? product.isBestSeller,
+        isSeasonalFavorite: parsedData.isSeasonalFavorite ?? product.isSeasonalFavorite,
+        isNewLaunch: parsedData.isNewLaunch ?? product.isNewLaunch,
       };
 
       // Handle variants if provided
@@ -502,4 +506,3 @@ export {
   updateProductBySupplier,
   updateProductSequence
 };
-

@@ -62,7 +62,48 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
   }
 };
 
-// controllers/adminPayment.controller.ts
+// Add this new function for deleting an order
+export const deleteOrder = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Find the order first
+    const order = await OrderModel.findById(id);
+    if (!order) {
+      return apiResponse(res, 404, false, "Order not found");
+    }
+
+    // Check if order is already shipped or delivered
+    if (order.orderStatus === "Shipped" || order.orderStatus === "Delivered") {
+      return apiResponse(
+        res,
+        400,
+        false,
+        "Cannot delete shipped or delivered orders. Please cancel first."
+      );
+    }
+
+    // Delete associated payment record
+    if (order.payment_id) {
+      await PaymentModel.findByIdAndDelete(order.payment_id);
+    }
+
+    // Delete associated shipping record
+    const shipping = await ShippingModel.findOne({ orderId: id });
+    if (shipping) {
+      await ShippingModel.findByIdAndDelete(shipping._id);
+    }
+
+    // Delete the order
+    await OrderModel.findByIdAndDelete(id);
+
+    return apiResponse(res, 200, true, "Order deleted successfully");
+  } catch (error) {
+    console.error("Error deleting order:", error);
+    return apiResponse(res, 500, false, "Error deleting order");
+  }
+};
+
 export const getAllPayments = async (req: Request, res: Response) => {
   try {
     const payments = await PaymentModel.find()
@@ -121,7 +162,6 @@ export const updatePaymentStatus = async (req: Request, res: Response) => {
   }
 };
 
-// controllers/adminReturnExchange.controller.ts
 export const getAllReturns = async (req: Request, res: Response) => {
   try {
     const returns = await ReturnExchangeModel.find()
@@ -160,7 +200,6 @@ export const updateReturnStatus = async (req: Request, res: Response) => {
   }
 };
 
-// controllers/adminShipping.controller.ts
 export const getAllShippings = async (req: Request, res: Response) => {
   try {
     const shippings = await ShippingModel.find()

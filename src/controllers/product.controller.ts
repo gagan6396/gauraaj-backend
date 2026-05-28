@@ -1,3 +1,4 @@
+// controllers/product.controller.ts
 import { Request, Response } from "express";
 import mongoose from "mongoose";
 import CartModel from "../models/Cart.model";
@@ -34,6 +35,8 @@ const getAllProductsWithOutAuth = async (req: any, res: Response) => {
           createdAt: 1,
           variants: 1,
           isBestSeller: 1,
+          isSeasonalFavorite: 1,
+          isNewLaunch: 1,
           sequence: 1,
         }
       )
@@ -54,8 +57,6 @@ const getAllProductsWithOutAuth = async (req: any, res: Response) => {
         select: "rating comment user_id",
       })
       .sort({ sequence: -1 });
-    // .skip(skip);
-    // .limit(limit);
 
     // Count total number of products for pagination
     const totalProducts = await productModel.countDocuments();
@@ -83,12 +84,12 @@ const getAllProducts = async (req: any, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const skip = (page - 1) * limit;
-    const userId = req?.user?.id; // Assuming user ID is available in the request object
+    const userId = req?.user?.id;
 
     // Fetch all products with necessary fields
     const products = await productModel
       .find(
-        {}, // Fetch all products without filtering
+        {},
         {
           supplier_id: 1,
           category_id: 1,
@@ -108,6 +109,8 @@ const getAllProducts = async (req: any, res: Response) => {
           createdAt: 1,
           variants: 1,
           isBestSeller: 1,
+          isSeasonalFavorite: 1,
+          isNewLaunch: 1,
           sequence: 1,
         }
       )
@@ -128,7 +131,6 @@ const getAllProducts = async (req: any, res: Response) => {
         select: "rating comment user_id",
       })
       .sort({ sequence: -1 });
-    // .limit(limit);
 
     // Fetch user's wishlist and cart
     const wishlist = await wishlistModel.findOne({ user_id: userId });
@@ -205,6 +207,8 @@ const getProductByIdWithOutAuth = async (req: any, res: Response) => {
         variants: 1,
         createdAt: 1,
         isBestSeller: 1,
+        isSeasonalFavorite: 1,
+        isNewLaunch: 1,
         sequence: 1,
       })
       .populate({
@@ -221,7 +225,7 @@ const getProductByIdWithOutAuth = async (req: any, res: Response) => {
       })
       .populate({
         path: "reviews",
-        select: "rating comment user_id", // Limit review fields
+        select: "rating comment user_id",
       })
       .lean();
 
@@ -245,13 +249,12 @@ const getProductByIdWithOutAuth = async (req: any, res: Response) => {
 const getProductById = async (req: any, res: Response) => {
   try {
     const { productId } = req.params;
-    const userId = req?.user?.id; // Assuming user ID is available in the request object
+    const userId = req?.user?.id;
 
     if (!productId) {
       return apiResponse(res, 400, false, "ProductId is Required");
     }
 
-    // Use .lean() to get a plain object
     const product: any = await productModel
       .findById(productId, {
         _id: 1,
@@ -274,6 +277,8 @@ const getProductById = async (req: any, res: Response) => {
         sku: 1,
         createdAt: 1,
         isBestSeller: 1,
+        isSeasonalFavorite: 1,
+        isNewLaunch: 1,
       })
       .populate({
         path: "supplier_id",
@@ -289,7 +294,7 @@ const getProductById = async (req: any, res: Response) => {
       })
       .populate({
         path: "reviews",
-        select: "rating comment user_id", // Limit review fields
+        select: "rating comment user_id",
       })
       .lean();
 
@@ -297,11 +302,9 @@ const getProductById = async (req: any, res: Response) => {
       return apiResponse(res, 404, false, "Product not found");
     }
 
-    // Fetch user's wishlist and cart
     const wishlist = await wishlistModel.findOne({ user_id: userId });
     const cart = await CartModel.findOne({ userId });
 
-    // Add inWishlist and inCart flags to the product
     const inWishlist =
       wishlist?.product_id.some((id: any) => id.equals(product._id)) || false;
     const inCart =
@@ -331,12 +334,10 @@ const searchProduct = async (req: Request, res: Response) => {
   try {
     const { searchTerm } = req.params;
 
-    // Validate searchTerm
     if (!searchTerm || searchTerm.trim().length === 0) {
       return apiResponse(res, 400, false, "Search term is required");
     }
 
-    // Perform the search query for name, description, color, and brand fields
     const products = await productModel
       .find({
         $or: [
@@ -359,20 +360,15 @@ const searchProduct = async (req: Request, res: Response) => {
         select: "shop_name",
       });
 
-    // Handle no results
     if (products.length === 0) {
       return apiResponse(res, 404, false, "No products found");
     }
 
-    // Success response
     return apiResponse(res, 200, true, "Products fetched successfully!", {
       products,
     });
   } catch (error) {
-    // Log error for debugging
     console.error("Error while searching products:", error);
-
-    // Internal server error response
     return apiResponse(res, 500, false, "Internal server error");
   }
 };
@@ -396,57 +392,50 @@ const filterProduct = async (req: Request, res: Response) => {
 
     const filter: Record<string, any> = {};
 
-    // Filter by category with ObjectId validation
     if (
       categoryId &&
       typeof categoryId === "string" &&
       mongoose.Types.ObjectId.isValid(categoryId)
     ) {
-      filter.category_id = new mongoose.Types.ObjectId(categoryId); // Cast to ObjectId
+      filter.category_id = new mongoose.Types.ObjectId(categoryId);
     } else if (categoryId) {
       return apiResponse(res, 400, false, "Invalid categoryId format");
     }
 
-    // Filter by subcategory with ObjectId validation
     if (
       subcategoryId &&
       typeof subcategoryId === "string" &&
       mongoose.Types.ObjectId.isValid(subcategoryId)
     ) {
-      filter.subcategory_id = new mongoose.Types.ObjectId(subcategoryId); // Cast to ObjectId
+      filter.subcategory_id = new mongoose.Types.ObjectId(subcategoryId);
     } else if (subcategoryId) {
       return apiResponse(res, 400, false, "Invalid subcategoryId format");
     }
 
-    // Filter by price range
     if (minPrice || maxPrice) {
       filter.price = {};
       if (minPrice) filter.price.$gte = parseFloat(minPrice as string);
       if (maxPrice) filter.price.$lte = parseFloat(maxPrice as string);
     }
 
-    // Filter by stock availability
     if (inStock === "true") {
       filter.stock = { $gt: 0 };
     }
 
-    // Filter by supplier ID with ObjectId validation
     if (
       supplierId &&
       typeof supplierId === "string" &&
       mongoose.Types.ObjectId.isValid(supplierId)
     ) {
-      filter.supplier_id = new mongoose.Types.ObjectId(supplierId); // Cast to ObjectId
+      filter.supplier_id = new mongoose.Types.ObjectId(supplierId);
     } else if (supplierId) {
       return apiResponse(res, 400, false, "Invalid supplierId format");
     }
 
-    // Filter by rating
     if (rating) {
       filter.rating = { $gte: parseFloat(rating as string) };
     }
 
-    // Filter by color (e.g., 'Red', 'Blue')
     if (color) {
       filter["color.name"] = { $regex: color as string, $options: "i" };
     }
@@ -487,12 +476,10 @@ const filterProduct = async (req: Request, res: Response) => {
     const totalProducts = await productModel.countDocuments(filter);
     const totalPages = Math.ceil(totalProducts / pageSize);
 
-    // Return response if no products are found
     if (!products || products.length === 0) {
       return apiResponse(res, 404, false, "No products found");
     }
 
-    // Return the filtered products with pagination data
     return apiResponse(
       res,
       200,
@@ -522,4 +509,3 @@ export {
   getProductByIdWithOutAuth,
   searchProduct
 };
-

@@ -6,6 +6,7 @@ import profileModel from "../models/Profile.model";
 import userModel from "../models/User.model";
 import apiResponse from "../utils/ApiResponse";
 import { generateToken } from "../utils/jwtHelper";
+import admin from "../config/firebase.config";
 
 // Configure Nodemailer transporter for Gmail
 const transporter = nodemailer.createTransport({
@@ -94,24 +95,75 @@ const RegisterUser = async (req: Request, res: Response) => {
   }
 };
 
+
+
 const LoginUser = async (req: Request, res: Response) => {
   try {
-    let { phone, email, password } = req.body;
-    console.log("DAATA :: ",phone, email, password);
-    // Check if at least one identifier (email or phone) and password are provided
+    let { phone, email, password, firebaseToken } = req.body;
+    console.log("DATA :: ", phone, email, password, firebaseToken ? "OTP Login" : "Password Login");
+
+    // ══════════════════════════════════════════
+    // OTP LOGIN (Firebase)
+    // ══════════════════════════════════════════
+    if (firebaseToken) {
+      // Firebase token must be present
+      if (!firebaseToken) {
+        return apiResponse(res, 400, false, "Firebase token is required");
+      }
+
+      // Verify Firebase token
+      let decoded;
+      try {
+        decoded = await admin.auth().verifyIdToken(firebaseToken);
+      } catch (err) {
+        return apiResponse(res, 401, false, "Invalid or expired OTP session");
+      }
+
+      // Extract phone from Firebase token
+      const firebasePhone = decoded.phone_number; // e.g. "+919876543210"
+      if (!firebasePhone) {
+        return apiResponse(res, 400, false, "Phone number not found in token");
+      }
+
+      // Find or create user by phone
+      let user = await userModel.findOne({ phone: firebasePhone });
+
+      if (!user) {
+        // Auto-register user if not found
+        user = await userModel.create({
+          phone: firebasePhone,
+          isVerified: true,
+          // name can be updated later from profile
+        });
+      }
+
+      // Generate your JWT
+      const token = generateToken({ id: user._id, email: user.email });
+
+      user.passwordResetToken = token;
+      await user.save();
+
+      return apiResponse(res, 200, true, "Login successful", {
+        user: { token },
+      });
+    }
+
+    // ══════════════════════════════════════════
+    // PASSWORD LOGIN (Email or Phone)
+    // ══════════════════════════════════════════
     if ((!email && !phone) || !password) {
       return apiResponse(res, 400, false, "Please fill all fields");
     }
 
-    // Add +91 prefix if phone is provided and doesn't start with +91
-    if (phone && !phone.startsWith('+91')) {
+    // Add +91 prefix if phone provided without it
+    if (phone && !phone.startsWith("+91")) {
       phone = `+91${phone}`;
     }
 
-    // Check if user exists by email or phone
+    // Find user by email or phone
     const query: any = { $or: [] };
-    if (email) query.$or.push({ email: email });
-    if (phone) query.$or.push({ phone: phone });
+    if (email) query.$or.push({ email });
+    if (phone) query.$or.push({ phone });
 
     const userExist = await userModel.findOne(query);
     if (!userExist) {
@@ -123,8 +175,7 @@ const LoginUser = async (req: Request, res: Response) => {
     if (!isPasswordValid) {
       return apiResponse(res, 401, false, "Invalid password");
     }
-
-    // Generate JWT token
+    // Generate JWT
     const token = generateToken({ id: userExist._id, email: userExist.email });
 
     userExist.passwordResetToken = token;
@@ -133,10 +184,23 @@ const LoginUser = async (req: Request, res: Response) => {
     return apiResponse(res, 200, true, "Login successful", {
       user: { token },
     });
+
   } catch (error) {
     console.error("Error while logging user:", error);
     return apiResponse(res, 500, false, "Internal server error");
   }
+};
+
+// Add to userauth.controller.ts
+export const CheckPhoneExists = async (req: Request, res: Response) => {
+  let { phone } = req.body;
+  if (!phone) return apiResponse(res, 400, false, "Phone is required");
+  if (!phone.startsWith("+91")) phone = `+91${phone}`;
+
+  const user = await userModel.findOne({ phone });
+  if (!user) return apiResponse(res, 404, false, "No account found. Please register first.");
+
+  return apiResponse(res, 200, true, "Phone verified");
 };
 
 const logOut = async (req: Request, res: Response) => {
