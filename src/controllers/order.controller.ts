@@ -431,7 +431,7 @@ const createOrder = async (req: any, res: Response) => {
     if (paymentMethod === 0) {
       // Razorpay
       const razorpayOrder = await razorpay.orders.create({
-        amount: (totalAmount + shippingCharges.rate) * 100,
+        amount: Math.round((totalAmount + shippingCharges.rate) * 100),
         currency: "INR",
         receipt: `order_${savedOrder._id}`,
       });
