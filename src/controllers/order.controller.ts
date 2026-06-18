@@ -53,7 +53,7 @@ const emailTemplate = `
       <a href="{{actionUrl}}" class="button">{{actionText}}</a>
     </div>
     <div class="footer">
-      <p>Gauraaj | <a href="https://www.gauraaj.com">Visit our website</a></p>
+      <p>Gauraaj | <a href="https://www.gauraaj.org">Visit our website</a></p>
       <p>Contact: <a href="mailto:ghccustomercare@gmail.com">ghccustomercare@gmail.com</a></p>
     </div>
   </div>
@@ -754,7 +754,7 @@ const shipOrder = async (req: any, res: Response) => {
     await sendOrderNotification(order, "shipped", {
       courier: courierDetails.courier_name,
       trackingNumber,
-      trackUrl: `https://www.gauraaj.com/track/${order._id}`,
+      trackUrl: `https://www.gauraaj.org/track/${order._id}`,
     });
 
     return apiResponse(res, 200, true, "Order shipped successfully.", {
@@ -908,7 +908,7 @@ const sendOrderNotification = async (
           "{{closingMessage}}",
           "We’ll notify you when your order ships."
         )
-        .replace("{{actionUrl}}", `https://www.gauraaj.com/orders/${order._id}`)
+        .replace("{{actionUrl}}", `https://www.gauraaj.org/orders/${order._id}`)
         .replace("{{actionText}}", "View Order");
       break;
 
@@ -931,7 +931,7 @@ const sendOrderNotification = async (
         .replace(
           "{{actionUrl}}",
           additionalData.trackUrl ||
-            `https://www.gauraaj.com/orders/${order._id}`
+            `https://www.gauraaj.org/orders/${order._id}`
         )
         .replace("{{actionText}}", "Track Order");
       break;
@@ -952,7 +952,7 @@ const sendOrderNotification = async (
           "{{closingMessage}}",
           "We hope you love your purchase! Please share your feedback."
         )
-        .replace("{{actionUrl}}", `https://www.gauraaj.com/review/${order._id}`)
+        .replace("{{actionUrl}}", `https://www.gauraaj.org/review/${order._id}`)
         .replace("{{actionText}}", "Write a Review");
       break;
 
@@ -1139,7 +1139,7 @@ const returnOrder = async (req: any, res: Response) => {
         "{{closingMessage}}",
         "We’ll process your return soon. Track the status in your account."
       )
-      .replace("{{actionUrl}}", `https://www.gauraaj.com/orders/${orderId}`)
+      .replace("{{actionUrl}}", `https://www.gauraaj.org/orders/${orderId}`)
       .replace("{{actionText}}", "Track Return");
 
     await sendEmail(order.userDetails.email, "Return Requested", emailBody);
@@ -1314,7 +1314,7 @@ const cancelOrder = async (req: any, res: Response) => {
         "{{closingMessage}}",
         "We’re sorry to see you cancel. Contact us if you need assistance."
       )
-      .replace("{{actionUrl}}", "https://www.gauraaj.com/user-account/")
+      .replace("{{actionUrl}}", "https://www.gauraaj.org/user-account/")
       .replace("{{actionText}}", "View Orders");
 
     await sendEmail(

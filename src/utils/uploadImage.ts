@@ -17,7 +17,7 @@ const upload = multer({
   storage: multerS3({
     s3: s3Client,
     bucket: process.env.AWS_BUCKET_NAME || "your-bucket-name",
-    acl: "public-read",
+    // acl: "public-read",
     key: (req, file, cb) => {
       const uniqueFileName = `${Date.now()}-${file.originalname}`;
       cb(null, uniqueFileName);
