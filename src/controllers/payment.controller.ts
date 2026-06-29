@@ -444,7 +444,7 @@ const verifyPayment = async (req: any, res: Response) => {
         )
         .replace(
           "{{actionUrl}}",
-          `https://gauraaj-admin.vercel.app/admin/orders/${emailData.orderId}`
+          `https://admin.gauraaj.com/admin/orders/${emailData.orderId}`
         )
         .replace("{{actionText}}", "View Order in Dashboard")
         .replace("{{companyName}}", emailData.companyName)
@@ -783,7 +783,7 @@ const shiprocketWebhook = async (req: Request, res: Response) => {
     }
 
     const actionUrl = `https://www.gauraaj.com/order-confirmation/${emailData.orderId}`;
-    const shopOwnerActionUrl = `https://gauraaj-admin.vercel.app/admin/orders/${emailData.orderId}`;
+    const shopOwnerActionUrl = `https://admin.gauraaj.com/admin/orders/${emailData.orderId}`;
 
     const customerEmailBody = emailTemplate
       .replace("Order Update", emailSubject)
