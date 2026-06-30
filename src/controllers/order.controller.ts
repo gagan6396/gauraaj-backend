@@ -1352,7 +1352,7 @@ const cancelOrder = async (req: any, res: Response) => {
         )
         .replace(
           "{{actionUrl}}",
-          `https://gauraaj-admin.vercel.app/admin/orders/${orderId}`
+          `https://admin.gauraaj.com/admin/orders/${orderId}`
         )
         .replace("{{actionText}}", "View Order in Dashboard");
 
